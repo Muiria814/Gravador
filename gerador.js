@@ -609,3 +609,5 @@ gerarMelodiaGenerica(acordes, duracao) {
         Tone.Transport.stop();
     }
 }
+
+window.GeradorMusical = GeradorMusical;
