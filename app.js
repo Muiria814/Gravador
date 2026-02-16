@@ -191,3 +191,5 @@ class VozStudio {
 
 // Garantir que a classe está disponível globalmente
 console.log('📦 app.js carregado, classe VozStudio definida:', typeof VozStudio);
+
+window.VozStudio = VozStudio;
