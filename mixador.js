@@ -1,4 +1,4 @@
-8class MixadorProfissional {
+class MixadorProfissional {
     constructor() {
         this.canais = new Map();
         this.masterBus = null;
