@@ -3,13 +3,13 @@ const urlsToCache = [
     '/',
     '/index.html',
     '/estilo.css',
+    '/tone.js',           // ← NOVO
     '/gravador.js',
     '/analisador.js',
     '/gerador.js',
     '/mixador.js',
     '/app.js',
-    '/manifest.json',
-    'https://cdn.jsdelivr.net/npm/tone'
+    '/manifest.json'
 ];
 
 self.addEventListener('install', event => {
