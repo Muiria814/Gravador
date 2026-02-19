@@ -2,13 +2,13 @@
 class VozStudio {
     constructor() {
         console.log('🎵 Criando VozStudio...');
-        
+
         // Inicializar componentes
         this.gravador = new GravadorVoz();
         this.gerador = new GeradorMusical();
         this.mixador = new MixadorProfissional();
         this.analisador = new AnalisadorVoz();
-        
+
         // Dados da aplicação
         this.analiseVozAtual = null;
         this.musicaGerada = null;
@@ -17,25 +17,25 @@ class VozStudio {
 
     inicializar() {
         console.log('🎵 Inicializando VozStudio...');
-        
+
         // Configurar eventos dos botões
         this.configurarEventos();
-        
+
         // Atualizar interface
         this.atualizarInterface();
-        
+
         // Inicializar mixador
         if (this.mixador && this.mixador.configurarMix) {
             this.mixador.configurarMix();
         }
-        
+
         console.log('✅ VozStudio pronto!');
         document.getElementById('infoVoz').innerHTML = '<p style="color: green;">✅ App pronta! Clique em Gravar Voz</p>';
     }
 
     configurarEventos() {
         console.log('🔌 Configurando eventos...');
-        
+
         // Botões de gravação
         const btnGravar = document.getElementById('btnGravar');
         const btnParar = document.getElementById('btnParar');
@@ -43,38 +43,38 @@ class VozStudio {
         const btnMP3 = document.getElementById('btnMP3');
         const btnWAV = document.getElementById('btnWAV');
         const btnCompartilhar = document.getElementById('btnCompartilhar');
-        
+
         if (btnGravar) {
             btnGravar.addEventListener('click', () => this.iniciarGravacao());
             console.log('✅ Botão Gravar configurado');
         }
-        
+
         if (btnParar) {
             btnParar.addEventListener('click', () => this.pararGravacao());
             console.log('✅ Botão Parar configurado');
         }
-        
+
         if (btnGerar) {
             btnGerar.addEventListener('click', () => this.gerarMusica());
             console.log('✅ Botão Gerar configurado');
         }
-        
+
         if (btnMP3) {
             btnMP3.addEventListener('click', () => this.exportarMP3());
         }
-        
+
         if (btnWAV) {
             btnWAV.addEventListener('click', () => this.exportarWAV());
         }
-        
+
         if (btnCompartilhar) {
             btnCompartilhar.addEventListener('click', () => this.compartilhar());
         }
-        
+
         // Slider BPM
         const bpmSlider = document.getElementById('bpm');
         const bpmValor = document.getElementById('bpmValor');
-        
+
         if (bpmSlider && bpmValor) {
             bpmSlider.addEventListener('input', (e) => {
                 bpmValor.textContent = e.target.value + ' BPM';
@@ -84,18 +84,18 @@ class VozStudio {
 
     async iniciarGravacao() {
         console.log('🎤 Iniciando gravação...');
-        
+
         try {
             // Pedir permissão e iniciar gravação
             const sucesso = await this.gravador.iniciar();
-            
+
             if (sucesso) {
                 this.gravador.comecarGravacao();
-                
+
                 // Atualizar botões
                 document.getElementById('btnGravar').disabled = true;
                 document.getElementById('btnParar').disabled = false;
-                
+
                 document.getElementById('infoVoz').innerHTML = 
                     '<p>🎙️ Gravando... Canta à vontade!</p>';
             }
@@ -108,9 +108,9 @@ class VozStudio {
 
     pararGravacao() {
         console.log('⏹️ Parando gravação...');
-        
+
         this.gravador.pararGravacao();
-        
+
         // Atualizar botões
         document.getElementById('btnGravar').disabled = false;
         document.getElementById('btnParar').disabled = true;
@@ -118,13 +118,13 @@ class VozStudio {
 
     async gerarMusica() {
         console.log('✨ Gerando música...');
-        
+
         // Verificar se temos análise da voz
         if (!this.analiseVozAtual) {
             alert('Por favor, grava a voz primeiro!');
             return;
         }
-        
+
         // Mostrar loading
         const btnGerar = document.getElementById('btnGerar');
         btnGerar.textContent = '⏳ Criando tua música...';
@@ -146,52 +146,17 @@ class VozStudio {
 
             console.log('Configurações:', config);
 
-            // ===========================================
-            // IMPLEMENTAÇÃO REAL DA GERAÇÃO DE MÚSICA
-            // ===========================================
-            
-            // 1. Usar o gerador para criar a música
-            this.musicaGerada = await this.gerador.gerarMusica(
-                this.analiseVozAtual,
-                config
-            );
-            
-            // 2. Criar um sintetizador simples para teste (enquanto o gerador não produz áudio real)
-            const synth = new Tone.Synth().toDestination();
-            
-            // 3. Criar uma melodia simples baseada na duração da voz
-            const duracao = this.analiseVozAtual.duracao || 10;
-            const parte = new Tone.Part((time, note) => {
-                synth.triggerAttackRelease(note, "8n", time);
-            }, [
-                [0, "C4"],
-                [0.5, "E4"],
-                [1, "G4"],
-                [1.5, "C5"],
-                [2, "G4"],
-                [2.5, "E4"],
-                [3, "C4"]
-            ]);
-            
-            parte.loop = true;
-            parte.loopEnd = duracao;
-            parte.start(0);
-            
-            // 4. Tocar a música
-            Tone.Transport.start();
-            
-            // 5. Criar URL para o player (enquanto não temos gravação real)
-            const audioContext = Tone.context;
-            const destination = audioContext.destination;
-            
-            // 6. Mostrar resultado
+            // Mostrar resultado
             document.getElementById('resultado').style.display = 'block';
             
-            // 7. Criar um player simulado (até termos gravação real)
+            // GERAR TOM DE TESTE
+            const audioUrl = await generateTestTone(3, 440);
             const player = document.getElementById('player');
-            player.src = ''; // Limpar src
+            player.src = audioUrl;
+            player.controls = true;
+            player.load();
             
-            alert('✅ Música gerada com sucesso! (O som está a tocar)');
+            alert('✅ Música gerada com sucesso! (Tom de teste)');
 
         } catch (error) {
             console.error('Erro ao gerar música:', error);
@@ -206,7 +171,7 @@ class VozStudio {
     receberAnaliseVoz(analise) {
         console.log('📊 Análise recebida:', analise);
         this.analiseVozAtual = analise;
-        
+
         // Atualizar interface
         document.getElementById('infoVoz').innerHTML = `
             <p style="color: green;">✅ Voz analisada!</p>
@@ -215,34 +180,21 @@ class VozStudio {
     }
 
     async exportarMP3() {
-        if (!this.musicaGerada) {
+        if (!this.analiseVozAtual) {
             alert('Gera uma música primeiro!');
             return;
         }
-        
+
         try {
-            // Criar um ficheiro WAV temporário (depois convertemos para MP3)
-            const audioContext = Tone.context;
             const duration = this.analiseVozAtual?.duracao || 5;
-            
-            // Criar um buffer de silêncio (placeholder até termos gravação real)
-            const buffer = audioContext.createBuffer(2, audioContext.sampleRate * duration, audioContext.sampleRate);
-            
-            // Converter para WAV
-            const wavData = this.bufferToWAV(buffer);
-            
-            // Converter para MP3 (simulado - na verdade é WAV com extensão MP3)
-            const blob = new Blob([wavData], { type: 'audio/mpeg' });
-            const url = URL.createObjectURL(blob);
+            const audioUrl = await generateTestTone(duration, 440);
             
             // Download
             const a = document.createElement('a');
-            a.href = url;
+            a.href = audioUrl;
             a.download = `vozstudio-${Date.now()}.mp3`;
             a.click();
-            
-            URL.revokeObjectURL(url);
-            
+
         } catch (error) {
             console.error('Erro ao exportar MP3:', error);
             alert('Erro ao exportar: ' + error.message);
@@ -250,98 +202,33 @@ class VozStudio {
     }
 
     async exportarWAV() {
-        if (!this.musicaGerada) {
+        if (!this.analiseVozAtual) {
             alert('Gera uma música primeiro!');
             return;
         }
-        
+
         try {
-            // Criar um buffer de silêncio (placeholder)
-            const audioContext = Tone.context;
             const duration = this.analiseVozAtual?.duracao || 5;
-            const buffer = audioContext.createBuffer(2, audioContext.sampleRate * duration, audioContext.sampleRate);
-            
-            // Converter para WAV
-            const wavData = this.bufferToWAV(buffer);
-            const blob = new Blob([wavData], { type: 'audio/wav' });
-            const url = URL.createObjectURL(blob);
+            const audioUrl = await generateTestTone(duration, 440);
             
             // Download
             const a = document.createElement('a');
-            a.href = url;
+            a.href = audioUrl;
             a.download = `vozstudio-${Date.now()}.wav`;
             a.click();
-            
-            URL.revokeObjectURL(url);
-            
+
         } catch (error) {
             console.error('Erro ao exportar WAV:', error);
             alert('Erro ao exportar: ' + error.message);
         }
     }
 
-    bufferToWAV(buffer) {
-        const numChannels = buffer.numberOfChannels;
-        const sampleRate = buffer.sampleRate;
-        const format = 1; // PCM
-        const bitDepth = 16;
-        
-        const bytesPerSample = bitDepth / 8;
-        const blockAlign = numChannels * bytesPerSample;
-        
-        const dataLength = buffer.length * blockAlign;
-        const headerLength = 44;
-        const totalLength = headerLength + dataLength;
-        
-        const wav = new ArrayBuffer(totalLength);
-        const view = new DataView(wav);
-        
-        // RIFF header
-        this.writeString(view, 0, 'RIFF');
-        view.setUint32(4, totalLength - 8, true);
-        this.writeString(view, 8, 'WAVE');
-        
-        // fmt subchunk
-        this.writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true); // fmt chunk size
-        view.setUint16(20, format, true); // audio format
-        view.setUint16(22, numChannels, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * blockAlign, true); // byte rate
-        view.setUint16(32, blockAlign, true);
-        view.setUint16(34, bitDepth, true);
-        
-        // data subchunk
-        this.writeString(view, 36, 'data');
-        view.setUint32(40, dataLength, true);
-        
-        // Write audio data (silêncio por enquanto)
-        const channelData = buffer.getChannelData(0);
-        let offset = 44;
-        for (let i = 0; i < buffer.length; i++) {
-            for (let channel = 0; channel < numChannels; channel++) {
-                const sample = Math.max(-1, Math.min(1, channelData[i]));
-                const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                view.setInt16(offset, intSample, true);
-                offset += 2;
-            }
-        }
-        
-        return wav;
-    }
-
-    writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    }
-
     async compartilhar() {
-        if (!this.musicaGerada) {
+        if (!this.analiseVozAtual) {
             alert('Gera uma música primeiro!');
             return;
         }
-        
+
         // Verificar se o navegador suporta compartilhamento
         if (navigator.share) {
             try {
@@ -367,3 +254,89 @@ class VozStudio {
 
 // Garantir que a classe está disponível globalmente
 console.log('📦 app.js carregado, classe VozStudio definida:', typeof VozStudio);
+
+// ===========================================
+// FUNÇÕES AUXILIARES
+// ===========================================
+
+/**
+ * Converte um AudioBuffer para WAV
+ */
+function bufferToWave(buffer, length) {
+    return new Promise((resolve) => {
+        const numChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+        const format = 1; // PCM
+        const bitDepth = 16;
+        
+        const bytesPerSample = bitDepth / 8;
+        const blockAlign = numChannels * bytesPerSample;
+        
+        const dataLength = length * sampleRate * blockAlign / 1000;
+        const bufferLength = dataLength + 44;
+        const arrayBuffer = new ArrayBuffer(bufferLength);
+        const view = new DataView(arrayBuffer);
+        
+        // RIFF header
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, bufferLength - 8, true);
+        writeString(view, 8, 'WAVE');
+        
+        // fmt subchunk
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitDepth, true);
+        
+        // data subchunk
+        writeString(view, 36, 'data');
+        view.setUint32(40, dataLength, true);
+        
+        // Write audio data
+        const channelData = buffer.getChannelData(0);
+        const offset = 44;
+        
+        for (let i = 0; i < dataLength / blockAlign; i++) {
+            const sample = Math.max(-1, Math.min(1, channelData[i]));
+            const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            view.setInt16(offset + i * 2, intSample, true);
+        }
+        
+        resolve(new Blob([arrayBuffer], { type: 'audio/wav' }));
+    });
+}
+
+/**
+ * Escreve uma string no DataView
+ */
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+/**
+ * Função para gerar um tom de teste
+ */
+async function generateTestTone(duration = 2, frequency = 440) {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const sampleRate = audioContext.sampleRate;
+    const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+    const channelData = buffer.getChannelData(0);
+    
+    for (let i = 0; i < buffer.length; i++) {
+        const t = i / sampleRate;
+        // Tom senoidal com fade out
+        channelData[i] = Math.sin(i * frequency * 2 * Math.PI / sampleRate) * 
+                        (1 - t / duration);
+    }
+    
+    const wavBlob = await bufferToWave(buffer, duration * 1000);
+    return URL.createObjectURL(wavBlob);
+}
+
+console.log('✅ Funções auxiliares carregadas');
