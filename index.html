@@ -162,6 +162,14 @@
                 return;
             }
             
+    // Verificar se Tone.js carregou
+        if (typeof Tone === 'undefined') {
+            document.getElementById('infoVoz').innerHTML = 
+                '<p style="color: red;">❌ Tone.js não carregou. Verifica a internet.</p>';
+            return;
+        }
+        
+        console.log('✅ Tone.js carregado com sucesso!');
             // Tudo ok, iniciar app
             try {
                 window.app = new VozStudio();
