@@ -21,6 +21,31 @@ class VozStudio {
         this.currentPart = null;
         this.isPlaying = false;
     }
+  pararTodosAudios() {
+    console.log('🔇 Parando todos os áudios...');
+    
+    // Parar o gerador se existir
+    if (this.gerador) {
+        try {
+            this.gerador.parar();
+            this.gerador.limparTudo();
+        } catch (e) {
+            console.log('Erro ao parar gerador:', e);
+        }
+    }
+    
+    // Parar o Tone.Transport globalmente
+    if (typeof Tone !== 'undefined' && Tone.Transport) {
+        try {
+            Tone.Transport.stop();
+            Tone.Transport.cancel();
+        } catch (e) {
+            console.log('Erro ao parar Tone:', e);
+        }
+    }
+    
+    console.log('✅ Todos os áudios parados');
+}
 
     inicializar() {
         console.log('🎵 Inicializando VozStudio...');
@@ -196,68 +221,128 @@ class VozStudio {
     }
 
     async gerarMusica() {
-        console.log('✨ Gerando música...');
-        
-        // ===========================================
-        // CRÍTICO: Parar todos os sons anteriores
-        // ===========================================
-        this.pararTodosOsSons();
+    console.log('✨ Gerando música...');
+    
+    // ===========================================
+    // CRÍTICO: Parar todos os sons anteriores
+    // ===========================================
+    this.pararTodosAudios();
 
-        // Verificar se temos análise da voz
-        if (!this.analiseVozAtual) {
-            alert('Por favor, grava a voz primeiro!');
-            return;
-        }
-
-        // Mostrar loading
-        const btnGerar = document.getElementById('btnGerar');
-        btnGerar.textContent = '⏳ Criando tua música...';
-        btnGerar.disabled = true;
-
-        try {
-            // Recolher configurações
-            const config = {
-                estilo: document.getElementById('estiloMusical')?.value || 'pop',
-                bpm: parseInt(document.getElementById('bpm')?.value || '100'),
-                tom: document.getElementById('tom')?.value || 'C',
-                piano: document.getElementById('instPiano')?.checked || true,
-                baixo: document.getElementById('instBaixo')?.checked || true,
-                bateria: document.getElementById('instBateria')?.checked || true,
-                guitarra: document.getElementById('instGuitarra')?.checked || false,
-                cordas: document.getElementById('instCordas')?.checked || false,
-                metal: document.getElementById('instMetal')?.checked || false
-            };
-
-            console.log('Configurações:', config);
-
-            // Mostrar resultado
-            document.getElementById('resultado').style.display = 'block';
-            
-            // GERAR TOM DE TESTE (limitado a 5 segundos)
-            const duration = Math.min(this.analiseVozAtual?.duracao || 5, 10);
-            const audioUrl = await generateTestTone(duration, 440);
-            const player = document.getElementById('player');
-            
-            // Remover URL anterior
-            if (this.audioUrl) {
-                URL.revokeObjectURL(this.audioUrl);
-            }
-            
-            this.audioUrl = audioUrl;
-            player.src = audioUrl;
-            player.controls = true;
-            player.load();
-            
-            alert(`✅ Música gerada com sucesso! (${duration}s)`);
-
-        } catch (error) {
-            console.error('Erro ao gerar música:', error);
-            alert('❌ Erro: ' + error.message);
-        } finally {
-            btnGerar.textContent = '✨ Criar Música Completa ✨';
-            btnGerar.disabled = false;
-        }
+    if (!this.analiseVozAtual) {
+        alert('Por favor, grava a voz primeiro!');
+        return;
     }
+
+    const btnGerar = document.getElementById('btnGerar');
+    btnGerar.textContent = '⏳ Criando tua música...';
+    btnGerar.disabled = true;
+
+    try {
+        // Recolher configurações
+        const config = {
+            estilo: document.getElementById('estiloMusical')?.value || 'pop',
+            bpm: parseInt(document.getElementById('bpm')?.value || '100'),
+            tom: document.getElementById('tom')?.value || 'C',
+            piano: document.getElementById('instPiano')?.checked || true,
+            baixo: document.getElementById('instBaixo')?.checked || true,
+            bateria: document.getElementById('instBateria')?.checked || true,
+            guitarra: document.getElementById('instGuitarra')?.checked || false,
+            cordas: document.getElementById('instCordas')?.checked || false,
+            metal: document.getElementById('instMetal')?.checked || false
+        };
+
+        console.log('Configurações:', config);
+
+        // ===========================================
+        // USAR O GERADOR REAL
+        // ===========================================
+        
+        // 1. Garantir que o Tone.js está pronto
+        await this.gerador.iniciarTone();
+        
+        // 2. Gerar a música REAL usando o gerador
+        this.musicaGerada = await this.gerador.gerarMusica(
+            this.analiseVozAtual,
+            config
+        );
+        
+        // 3. Mostrar resultado
+        document.getElementById('resultado').style.display = 'block';
+        
+        // 4. Criar botões de controlo (NÃO SUBSTITUIR o HTML inteiro)
+        const resultadoDiv = document.getElementById('resultado');
+        
+        // Verificar se já existe div de controlos
+        let controlesDiv = document.getElementById('controles-musica');
+        if (!controlesDiv) {
+            controlesDiv = document.createElement('div');
+            controlesDiv.id = 'controles-musica';
+            resultadoDiv.insertBefore(controlesDiv, resultadoDiv.firstChild);
+        }
+        
+        // Limpar controlos anteriores
+        controlesDiv.innerHTML = '';
+        
+        // 5. Criar botão de Play/Pause
+        const playBtn = document.createElement('button');
+        playBtn.textContent = '⏸️ Parar'; // Começa a tocar
+        playBtn.style.margin = '10px';
+        playBtn.style.padding = '10px 20px';
+        playBtn.style.background = '#ff4444';
+        playBtn.style.color = 'white';
+        playBtn.style.border = 'none';
+        playBtn.style.borderRadius = '5px';
+        playBtn.style.cursor = 'pointer';
+        playBtn.style.fontSize = '16px';
+        
+        controlesDiv.appendChild(playBtn);
+        
+        // Estado da música
+        let musicaTocando = true;
+        
+        // Evento do botão
+        playBtn.onclick = () => {
+            if (musicaTocando) {
+                // Parar a música
+                this.gerador.parar();
+                playBtn.textContent = '▶️ Tocar';
+                playBtn.style.background = '#4CAF50';
+            } else {
+                // Tocar a música
+                this.gerador.tocar();
+                playBtn.textContent = '⏸️ Parar';
+                playBtn.style.background = '#ff4444';
+            }
+            musicaTocando = !musicaTocando;
+        };
+        
+        // 6. Reconfigurar os botões de exportar (se necessário)
+        const btnMP3 = document.getElementById('btnMP3');
+        const btnWAV = document.getElementById('btnWAV');
+        const btnCompartilhar = document.getElementById('btnCompartilhar');
+        
+        if (btnMP3) {
+            btnMP3.onclick = () => this.exportarMP3();
+        }
+        
+        if (btnWAV) {
+            btnWAV.onclick = () => this.exportarWAV();
+        }
+        
+        if (btnCompartilhar) {
+            btnCompartilhar.onclick = () => this.compartilhar();
+        }
+        
+        alert('✅ Música gerada com sucesso! Usa os botões para controlar.');
+
+    } catch (error) {
+        console.error('Erro ao gerar música:', error);
+        alert('❌ Erro: ' + error.message);
+    } finally {
+        btnGerar.textContent = '✨ Criar Música Completa ✨';
+        btnGerar.disabled = false;
+    }
+}
 
     // Recebe análise do gravador
     receberAnaliseVoz(analise) {
