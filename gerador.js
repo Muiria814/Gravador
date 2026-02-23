@@ -63,89 +63,218 @@ class GeradorMusical {
     }
 
     async gerarMusica(analiseVoz, configuracoes) {
-        await this.iniciarTone();
-        
-        await this.carregarSamples();
-        
-        // Limpar músicas anteriores
-        this.limparTudo();
-        
-        const instrumentos = [];
-        
-        // Criar os instrumentos selecionados
-        if (configuracoes.piano) {
-            instrumentos.push(await this.criarPiano());
-        }
-        
-        if (configuracoes.baixo) {
-            instrumentos.push(await this.criarBaixo());
-        }
-        
-        if (configuracoes.bateria) {
-            instrumentos.push(await this.criarBateria(configuracoes.bpm));
-        }
-        
-        if (configuracoes.guitarra) {
-            instrumentos.push(await this.criarGuitarra());
-        }
-        
-        // ===========================================
-        // NOVO: Adicionar a voz gravada à música
-        // ===========================================
-        if (analiseVoz.audioData) {
-            console.log('🎤 Adicionando voz à música...');
-            
-            // Criar player para a voz
-            this.vozPlayer = new Tone.Player(analiseVoz.audioData).toDestination();
-            
-            // Ajustar volume da voz (opcional)
-            this.vozPlayer.volume.value = -3; // Reduzir um pouco para não sobrepor
-            
-            // Adicionar aos instrumentos
-            instrumentos.push(this.vozPlayer);
-            
-            console.log('✅ Voz adicionada!');
-        } else {
-            console.log('⚠️ Nenhuma voz encontrada para adicionar');
-        }
-        
-        // Gerar progressão de acordes baseada no estilo
-        const acordes = this.gerarAcordes(
-            configuracoes.estilo,
-            configuracoes.tom,
-            analiseVoz
-        );
-        
-        // Gerar melodia baseada na voz (para os instrumentos)
-        const melodia = this.adaptarMelodia(
-            analiseVoz,
-            configuracoes.tom,
-            acordes
-        );
-        
-        // Criar as sequências (para os instrumentos)
-        this.criarSequencias(instrumentos, acordes, melodia, configuracoes);
-        
-        // ===========================================
-        // NOVO: Iniciar a voz no tempo certo
-        // ===========================================
-        if (this.vozPlayer) {
-            // Começar a voz um pouco depois para sincronizar com os instrumentos
-            Tone.Transport.schedule((time) => {
-                this.vozPlayer.start(time);
-            }, 0);
-        }
-        
-        // Iniciar tudo
-        Tone.Transport.start();
-        
-        return {
-            acordes,
-            melodia,
-            bpm: configuracoes.bpm,
-            duracao: analiseVoz.duracao
-        };
+    await this.iniciarTone();
+    
+    await this.carregarSamples();
+    
+    // Limpar músicas anteriores
+    this.limparTudo();
+    
+    console.log('🎵 Configurações recebidas:', configuracoes);
+    
+    // Array para guardar todos os instrumentos
+    const instrumentos = [];
+    const instrumentosMap = {};
+    
+    // ===========================================
+    // CRIAR CADA INSTRUMENTO INDIVIDUALMENTE
+    // ===========================================
+    
+    // PIANO
+    if (configuracoes.piano) {
+        console.log('🎹 Criando piano...');
+        const piano = await this.criarPiano();
+        instrumentos.push(piano);
+        instrumentosMap.piano = piano;
     }
+    
+    // BAIXO
+    if (configuracoes.baixo) {
+        console.log('🎸 Criando baixo...');
+        const baixo = await this.criarBaixo();
+        instrumentos.push(baixo);
+        instrumentosMap.baixo = baixo;
+    }
+    
+    // BATERIA
+    if (configuracoes.bateria) {
+        console.log('🥁 Criando bateria...');
+        const bateria = await this.criarBateria(configuracoes.bpm);
+        instrumentos.push(bateria.sampler || bateria.sintetizador);
+        instrumentosMap.bateria = bateria;
+    }
+    
+    // GUITARRA
+    if (configuracoes.guitarra) {
+        console.log('🎸 Criando guitarra...');
+        const guitarra = await this.criarGuitarra();
+        instrumentos.push(guitarra);
+        instrumentosMap.guitarra = guitarra;
+    }
+    
+    // CORDAS
+    if (configuracoes.cordas) {
+        console.log('🎻 Criando cordas...');
+        // Usar sintetizador diferente para cordas
+        const cordas = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: {
+                attack: 0.1,
+                decay: 0.2,
+                sustain: 0.8,
+                release: 1.5
+            }
+        }).toDestination();
+        cordas.volume.value = -8;
+        instrumentos.push(cordas);
+        instrumentosMap.cordas = cordas;
+    }
+    
+    // METAIS
+    if (configuracoes.metal) {
+        console.log('🎺 Criando metais...');
+        // Sintetizador para metais
+        const metal = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: {
+                attack: 0.05,
+                decay: 0.1,
+                sustain: 0.6,
+                release: 0.8
+            }
+        }).toDestination();
+        metal.volume.value = -6;
+        instrumentos.push(metal);
+        instrumentosMap.metal = metal;
+    }
+    
+    // ===========================================
+    // VOZ GRAVADA
+    // ===========================================
+    if (analiseVoz.audioData) {
+        console.log('🎤 Adicionando voz à música...');
+        this.vozPlayer = new Tone.Player(analiseVoz.audioData).toDestination();
+        this.vozPlayer.volume.value = -3;
+        instrumentos.push(this.vozPlayer);
+        instrumentosMap.voz = this.vozPlayer;
+    }
+    
+    console.log(`✅ Total de instrumentos: ${instrumentos.length}`);
+    
+    // Gerar progressão de acordes baseada no estilo
+    const acordes = this.gerarAcordes(
+        configuracoes.estilo,
+        configuracoes.tom,
+        analiseVoz
+    );
+    console.log('🎵 Acordes gerados:', acordes);
+    
+    // Extrair melodia da voz (para os instrumentos)
+    const melodia = this.adaptarMelodia(
+        analiseVoz,
+        configuracoes.tom,
+        acordes
+    );
+    console.log(`🎵 Melodia gerada com ${melodia.length} notas`);
+    
+    // ===========================================
+    // CRIAR SEQUÊNCIAS PARA CADA INSTRUMENTO
+    // ===========================================
+    
+    // 1. ACORDES (piano, guitarra, cordas, metais)
+    const instrumentosAcordes = [];
+    if (instrumentosMap.piano) instrumentosAcordes.push({ inst: instrumentosMap.piano, tipo: 'piano', oitava: 3, duracao: '2n' });
+    if (instrumentosMap.guitarra) instrumentosAcordes.push({ inst: instrumentosMap.guitarra, tipo: 'guitarra', oitava: 4, duracao: '4n' });
+    if (instrumentosMap.cordas) instrumentosAcordes.push({ inst: instrumentosMap.cordas, tipo: 'cordas', oitava: 5, duracao: '1n' });
+    if (instrumentosMap.metal) instrumentosAcordes.push({ inst: instrumentosMap.metal, tipo: 'metal', oitava: 4, duracao: '2n' });
+    
+    instrumentosAcordes.forEach(item => {
+        const parteAcordes = new Tone.Part((time, acorde) => {
+            item.inst.triggerAttackRelease(acorde + item.oitava, item.duracao, time);
+        }, acordes.map((acorde, i) => [i * 2, acorde]));
+        
+        parteAcordes.loop = true;
+        parteAcordes.loopEnd = '8m';
+        parteAcordes.start(0);
+        console.log(`✅ Sequência de acordes criada para ${item.tipo}`);
+    });
+    
+    // 2. BAIXO
+    if (instrumentosMap.baixo) {
+        const notasBaixo = acordes.map(acorde => {
+            const notaBase = acorde.replace(/[^A-G#]/g, '');
+            return notaBase + '1'; // Baixo mais grave
+        });
+        
+        const parteBaixo = new Tone.Part((time, nota) => {
+            instrumentosMap.baixo.triggerAttackRelease(nota, '4n', time);
+        }, notasBaixo.map((nota, i) => [i * 2, nota]));
+        
+        parteBaixo.loop = true;
+        parteBaixo.loopEnd = '8m';
+        parteBaixo.start(0);
+        console.log('✅ Sequência de baixo criada');
+    }
+    
+    // 3. BATERIA
+    if (instrumentosMap.bateria) {
+        const padrao = this.gerarPadraoBateria(configuracoes.bpm);
+        
+        padrao.forEach(nota => {
+            Tone.Transport.schedule((time) => {
+                if (instrumentosMap.bateria.sampler) {
+                    if (nota.tipo === 'kick') instrumentosMap.bateria.sampler.triggerAttackRelease('kick', '16n', time);
+                    else if (nota.tipo === 'snare') instrumentosMap.bateria.sampler.triggerAttackRelease('snare', '16n', time);
+                    else if (nota.tipo === 'hat') instrumentosMap.bateria.sampler.triggerAttackRelease('hihat', '16n', time);
+                } else if (instrumentosMap.bateria.sintetizador) {
+                    if (nota.tipo === 'kick') {
+                        instrumentosMap.bateria.sintetizador.triggerAttackRelease('C2', '16n', time);
+                    } else if (nota.tipo === 'snare') {
+                        instrumentosMap.bateria.sintetizador.triggerAttackRelease('E2', '16n', time);
+                    } else {
+                        instrumentosMap.bateria.sintetizador.triggerAttackRelease('G2', '32n', time);
+                    }
+                }
+            }, nota.tempo);
+        });
+        console.log('✅ Sequência de bateria criada');
+    }
+    
+    // 4. MELODIA PRINCIPAL (baseada na voz)
+    if (melodia.length > 0) {
+        // Escolher instrumento para a melodia (piano por padrão)
+        let instMelodia = instrumentosMap.piano || instrumentosMap.guitarra || instrumentosMap.cordas;
+        
+        if (instMelodia) {
+            const parteMelodia = new Tone.Part((time, nota) => {
+                instMelodia.triggerAttackRelease(nota.nota, nota.duracao, time);
+            }, melodia);
+            
+            parteMelodia.start(0);
+            console.log('✅ Melodia principal criada');
+        }
+    }
+    
+    // 5. INICIAR A VOZ
+    if (this.vozPlayer) {
+        Tone.Transport.schedule((time) => {
+            this.vozPlayer.start(time);
+        }, 0);
+        console.log('✅ Voz agendada');
+    }
+    
+    // Iniciar tudo
+    Tone.Transport.start();
+    console.log('🎵 Transporte iniciado!');
+    
+    return {
+        acordes,
+        melodia,
+        bpm: configuracoes.bpm,
+        duracao: analiseVoz.duracao,
+        instrumentos: Object.keys(instrumentosMap)
+    };
+}
 
     // ===========================================
     // MÉTODOS EXISTENTES (mantém iguais)
@@ -252,20 +381,21 @@ class GeradorMusical {
     }
 
     async criarGuitarra() {
-        const guitarra = new Tone.NoiseSynth({
-            noise: {
-                type: "brown"
-            },
-            envelope: {
-                attack: 0.005,
-                decay: 0.1,
-                sustain: 0.05,
-                release: 0.8
-            }
-        }).toDestination();
-        
-        return guitarra;
-    }
+    const guitarra = new Tone.Synth({
+        oscillator: {
+            type: 'triangle'
+        },
+        envelope: {
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0.3,
+            release: 0.5
+        }
+    }).toDestination();
+    
+    guitarra.volume.value = -4;
+    return guitarra;
+}
 
     gerarAcordes(estilo, tom, analiseVoz) {
         const progressoes = {
